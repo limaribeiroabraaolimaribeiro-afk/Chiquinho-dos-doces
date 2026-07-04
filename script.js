@@ -40,7 +40,10 @@ const PRODUCTS = [
     desc: 'Cremosa e intensa, para os apaixonados por chocolate.',
     price: 15,
     category: 'mousses',
-    image: 'assets/mousse-chocolate.jpg',
+    // imagem definitiva ainda não enviada pelo cliente — troque o arquivo
+    // "img/produto chocolate.png" quando a foto própria estiver disponível.
+    image: 'img/produto chocolate.png',
+    tempImage: 'img/temp-mousse-chocolate.jpg',
     emoji: '🍫',
     btnClass: 'btn-add--choco'
   },
@@ -66,6 +69,12 @@ const PRODUCTS = [
   }
 ];
 
+// Categorias exibidas nas abas e suas seções correspondentes no DOM
+const CATEGORIES = [
+  { key: 'mousses', gridId: 'grid-mousses', sectionId: 'section-mousses' },
+  { key: 'tortas', gridId: 'grid-tortas', sectionId: 'section-tortas' }
+];
+
 const state = {
   category: 'mousses',
   search: '',
@@ -74,6 +83,22 @@ const state = {
 
 const currency = (value) =>
   value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+// ---------- Fallback em cadeia para imagens ----------
+// Tenta a foto definitiva do produto; se não existir, tenta a imagem
+// temporária de referência; se nenhuma existir, mostra o emoji.
+
+function attachImageFallback(img, product) {
+  img.addEventListener('error', function onError() {
+    if (product.tempImage && !img.dataset.triedTemp) {
+      img.dataset.triedTemp = 'true';
+      if (product.tempImagePosition) img.style.objectPosition = product.tempImagePosition;
+      img.src = product.tempImage;
+    } else {
+      img.parentElement.classList.add('product-card__media--fallback');
+    }
+  });
+}
 
 // ---------- Renderização dos cards ----------
 
@@ -91,7 +116,7 @@ function createProductCard(product) {
           <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/>
         </svg>
       </button>
-      <img src="${product.image}" alt="${product.name}" onerror="this.parentElement.classList.add('product-card__media--fallback')">
+      <img src="${product.image}" alt="${product.name}">
     </div>
     <div class="product-card__body">
       <h3 class="product-card__name">${product.name}</h3>
@@ -106,6 +131,8 @@ function createProductCard(product) {
     </div>
   `;
 
+  attachImageFallback(card.querySelector('img'), product);
+
   card.querySelector('.fav-btn').addEventListener('click', (e) => {
     e.currentTarget.classList.toggle('is-active');
   });
@@ -116,32 +143,24 @@ function createProductCard(product) {
 }
 
 function renderProducts() {
-  const gridMousses = document.getElementById('grid-mousses');
-  const gridTortas = document.getElementById('grid-tortas');
-  gridMousses.innerHTML = '';
-  gridTortas.innerHTML = '';
-
   const term = state.search.trim().toLowerCase();
+  let anyVisible = false;
 
-  const visibleMousses = PRODUCTS.filter(p =>
-    p.category === 'mousses' && p.name.toLowerCase().includes(term)
-  );
-  const visibleTortas = PRODUCTS.filter(p =>
-    p.category === 'tortas' && p.name.toLowerCase().includes(term)
-  );
+  CATEGORIES.forEach(({ key, gridId, sectionId }) => {
+    const grid = document.getElementById(gridId);
+    grid.innerHTML = '';
+    document.getElementById(sectionId).hidden = state.category !== key;
 
-  const showMousses = state.category === 'mousses' && visibleMousses.length > 0;
-  const showTortas = state.category === 'tortas' && visibleTortas.length > 0;
+    if (state.category !== key) return;
 
-  document.getElementById('section-mousses').hidden = state.category !== 'mousses';
-  document.getElementById('section-tortas').hidden = state.category !== 'tortas';
+    const visible = PRODUCTS.filter(p =>
+      p.category === key && p.name.toLowerCase().includes(term)
+    );
+    visible.forEach(p => grid.appendChild(createProductCard(p)));
+    if (visible.length > 0) anyVisible = true;
+  });
 
-  visibleMousses.forEach(p => gridMousses.appendChild(createProductCard(p)));
-  visibleTortas.forEach(p => gridTortas.appendChild(createProductCard(p)));
-
-  const noResults = document.getElementById('noResults');
-  const hasAny = state.category === 'mousses' ? visibleMousses.length > 0 : visibleTortas.length > 0;
-  noResults.hidden = hasAny;
+  document.getElementById('noResults').hidden = anyVisible;
 }
 
 // ---------- Abas de categoria ----------
@@ -210,7 +229,7 @@ function renderCartPanel() {
     item.className = 'cart-item';
     item.innerHTML = `
       <div class="cart-item__media">
-        <img src="${product.image}" alt="${product.name}" onerror="this.style.display='none'; this.parentElement.textContent='${product.emoji}'">
+        <img src="${product.image}" alt="${product.name}">
       </div>
       <div class="cart-item__info">
         <p class="cart-item__name">${product.name}</p>
@@ -222,6 +241,18 @@ function renderCartPanel() {
         <button class="qty-btn" data-action="increase" data-id="${id}">+</button>
       </div>
     `;
+
+    const img = item.querySelector('img');
+    img.addEventListener('error', function onError() {
+      if (product.tempImage && !img.dataset.triedTemp) {
+        img.dataset.triedTemp = 'true';
+        img.src = product.tempImage;
+      } else {
+        img.style.display = 'none';
+        img.parentElement.textContent = product.emoji;
+      }
+    });
+
     container.appendChild(item);
   });
 
