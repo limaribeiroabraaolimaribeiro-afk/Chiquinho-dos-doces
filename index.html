@@ -118,26 +118,45 @@
      entre o botão "Fale conosco" (carrinho vazio) e "Ver carrinho" (com itens). -->
 <div class="bottom-bar" id="bottomBar"></div>
 
-<!-- ===== TELA "MEU PEDIDO" ===== -->
-<section class="cart-page" id="cartPage" hidden>
-  <header class="page-header">
-    <button class="page-back-btn" id="closeCartPage" aria-label="Voltar">&lt;</button>
-    <h1>Meu pedido</h1>
-  </header>
-
-  <div class="cart-page__content">
-    <div class="cart-page__list" id="cartPageList"></div>
-    <p class="cart-page__empty" id="cartPageEmpty" hidden>Seu carrinho está vazio.</p>
-  </div>
-
-  <div class="cart-page__footer" id="cartPageFooter">
-    <div class="cart-page__total-row">
-      <span>Total</span>
-      <strong id="cartPageTotal">R$ 0,00</strong>
+<!-- ===== MODAL "SEU PEDIDO" ===== -->
+<div class="cart-overlay" id="cartOverlay">
+  <div class="cart-modal">
+    <div class="cart-modal-header">
+      <div class="cart-title">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24">
+          <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/>
+          <path d="M3 6h18"/>
+          <path d="M16 10a4 4 0 0 1-8 0"/>
+        </svg>
+        <h2>Seu pedido</h2>
+      </div>
+      <button class="cart-close-btn" id="closeCartModal" aria-label="Fechar">&times;</button>
     </div>
-    <button class="checkout-btn" id="goToCheckoutBtn">Finalizar pedido</button>
+
+    <div class="cart-items" id="cartItems"></div>
+
+    <div class="cart-summary">
+      <div class="cart-summary__inner">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong id="cartSubtotal">R$ 0,00</strong>
+        </div>
+        <div class="summary-row">
+          <span>Taxa de entrega</span>
+          <strong class="free-delivery">Grátis</strong>
+        </div>
+        <div class="summary-row total-row">
+          <span>Total</span>
+          <strong id="cartTotal">R$ 0,00</strong>
+        </div>
+        <button class="cart-checkout-btn" id="goToCheckout">
+          Finalizar pedido
+          <span>→</span>
+        </button>
+      </div>
+    </div>
   </div>
-</section>
+</div>
 
 <!-- ===== TELA DE CHECKOUT ===== -->
 <section class="checkout-page" id="checkoutPage" hidden>

@@ -321,11 +321,6 @@ function changeQty(productId, delta) {
   onCartChanged();
 }
 
-function removeFromCart(productId) {
-  delete state.cart[productId];
-  onCartChanged();
-}
-
 function getCartTotals() {
   let count = 0;
   let total = 0;
@@ -339,11 +334,20 @@ function getCartTotals() {
 }
 
 // Chamado sempre que o carrinho muda: atualiza a bolinha do cabeçalho,
-// a barra inferior e — se a tela "Meu pedido" estiver aberta — a lista.
+// a barra inferior e — se o modal "Seu pedido" estiver aberto — a lista.
+// Se o carrinho esvaziar com o modal aberto, fecha o modal automaticamente.
 function onCartChanged() {
   updateCartBadge();
   updateBottomBar();
-  if (!document.getElementById('cartPage').hidden) renderCartPage();
+
+  if (document.getElementById('cartOverlay').classList.contains('active')) {
+    const { count } = getCartTotals();
+    if (count === 0) {
+      closeCartPage();
+    } else {
+      renderCartItems();
+    }
+  }
 }
 
 function updateCartBadge() {
@@ -412,52 +416,37 @@ function updateBottomBar() {
 
 // ---------- Tela "Meu pedido" ----------
 
-function renderCartPage() {
+function renderCartItems() {
   const entries = Object.entries(state.cart);
-  const list = document.getElementById('cartPageList');
-  const emptyMsg = document.getElementById('cartPageEmpty');
-  const footer = document.getElementById('cartPageFooter');
-
+  const list = document.getElementById('cartItems');
   list.innerHTML = '';
-
-  if (entries.length === 0) {
-    emptyMsg.hidden = false;
-    footer.hidden = true;
-    return;
-  }
-
-  emptyMsg.hidden = true;
-  footer.hidden = false;
 
   entries.forEach(([id, qty]) => {
     const product = PRODUCTS.find(p => p.id === id);
     if (!product) return;
 
     const item = document.createElement('div');
-    item.className = 'cart-page__item';
+    item.className = 'cart-item';
     item.innerHTML = `
-      <div class="cart-page__item-media">
+      <div class="cart-item-image">
         <img src="${product.image}" alt="${product.name}">
       </div>
-      <div class="cart-page__item-info">
-        <p class="cart-page__item-name">${product.name}</p>
-        <span class="cart-page__item-price">${currency(product.price)} / un.</span>
-        <div class="cart-page__item-qty">
-          <button class="qty-btn" data-action="decrease" data-id="${id}">−</button>
+      <div class="cart-item-main">
+        <h3 class="cart-item-title">${product.name}</h3>
+        <span class="cart-item-unit-price">${currency(product.price)} / un.</span>
+        <div class="cart-qty-control">
+          <button class="remove-btn" data-action="decrease" data-id="${id}" aria-label="Diminuir quantidade de ${product.name}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+            </svg>
+          </button>
           <span>${qty}</span>
-          <button class="qty-btn" data-action="increase" data-id="${id}">+</button>
+          <button data-action="increase" data-id="${id}" aria-label="Aumentar quantidade de ${product.name}">+</button>
         </div>
       </div>
-      <div class="cart-page__item-side">
-        <button class="remove-btn" data-id="${id}" aria-label="Remover ${product.name}">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-            <path d="M3 6h18"/>
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-          </svg>
-        </button>
-        <span class="cart-page__item-subtotal">${currency(product.price * qty)}</span>
-      </div>
+      <div class="cart-item-price">${currency(product.price * qty)}</div>
     `;
 
     const img = item.querySelector('img');
@@ -474,51 +463,64 @@ function renderCartPage() {
     list.appendChild(item);
   });
 
-  list.querySelectorAll('.qty-btn').forEach(btn => {
+  list.querySelectorAll('[data-action]').forEach(btn => {
     btn.addEventListener('click', () => {
       const delta = btn.dataset.action === 'increase' ? 1 : -1;
       changeQty(btn.dataset.id, delta);
     });
   });
 
-  list.querySelectorAll('.remove-btn').forEach(btn => {
-    btn.addEventListener('click', () => removeFromCart(btn.dataset.id));
-  });
-
-  document.getElementById('cartPageTotal').textContent = currency(getCartTotals().total);
+  const { total } = getCartTotals();
+  document.getElementById('cartSubtotal').textContent = currency(total);
+  document.getElementById('cartTotal').textContent = currency(total);
 }
 
 function openCartPage() {
-  document.getElementById('cartPage').hidden = false;
+  const { count } = getCartTotals();
+  if (count === 0) return;
+  renderCartItems();
+  document.getElementById('cartOverlay').classList.add('active');
   document.body.style.overflow = 'hidden';
-  renderCartPage();
+  document.getElementById('bottomBar').style.display = 'none';
 }
 
 function closeCartPage() {
-  document.getElementById('cartPage').hidden = true;
+  document.getElementById('cartOverlay').classList.remove('active');
   document.body.style.overflow = '';
+  document.getElementById('bottomBar').style.display = '';
 }
 
 document.getElementById('cartToggle').addEventListener('click', openCartPage);
-document.getElementById('closeCartPage').addEventListener('click', closeCartPage);
-document.getElementById('goToCheckoutBtn').addEventListener('click', openCheckoutPage);
+document.getElementById('closeCartModal').addEventListener('click', closeCartPage);
+document.getElementById('cartOverlay').addEventListener('click', (e) => {
+  if (e.target.id === 'cartOverlay') closeCartPage();
+});
+document.getElementById('goToCheckout').addEventListener('click', openCheckoutPage);
 
 // ---------- Tela de checkout ----------
 
 function openCheckoutPage() {
-  document.getElementById('cartPage').hidden = true;
+  document.getElementById('cartOverlay').classList.remove('active');
   document.getElementById('checkoutPage').hidden = false;
 }
 
 function closeCheckoutPage() {
   document.getElementById('checkoutPage').hidden = true;
-  document.getElementById('cartPage').hidden = false;
+
+  const { count } = getCartTotals();
+  if (count === 0) {
+    closeCartPage();
+    return;
+  }
+  renderCartItems();
+  document.getElementById('cartOverlay').classList.add('active');
 }
 
 function exitToHome() {
   document.getElementById('checkoutPage').hidden = true;
-  document.getElementById('cartPage').hidden = true;
+  document.getElementById('cartOverlay').classList.remove('active');
   document.body.style.overflow = '';
+  document.getElementById('bottomBar').style.display = '';
 }
 
 document.getElementById('closeCheckoutPage').addEventListener('click', closeCheckoutPage);
@@ -621,7 +623,7 @@ document.getElementById('sendOrderBtn').addEventListener('click', () => {
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!document.getElementById('checkoutPage').hidden) { closeCheckoutPage(); return; }
-  if (!document.getElementById('cartPage').hidden) { closeCartPage(); return; }
+  if (document.getElementById('cartOverlay').classList.contains('active')) { closeCartPage(); return; }
   if (!document.getElementById('searchPage').hidden) { closeSearchPage(); }
 });
 
