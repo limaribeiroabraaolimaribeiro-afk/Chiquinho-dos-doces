@@ -158,43 +158,101 @@
   </div>
 </div>
 
-<!-- ===== TELA DE CHECKOUT ===== -->
-<section class="checkout-page" id="checkoutPage" hidden>
-  <header class="page-header">
-    <button class="page-back-btn" id="closeCheckoutPage" aria-label="Voltar">&lt;</button>
-    <h1>Finalizar pedido</h1>
+<!-- ===== TELA DE CHECKOUT (estilo Day Lanches: topo + etapas + cards) ===== -->
+<section class="checkout-page" id="checkoutPage">
+  <header class="checkout-topbar">
+    <button class="checkout-back-btn" id="closeCheckoutPage" aria-label="Voltar">&lt;</button>
+    <div class="checkout-brand">
+      <img src="img/logo.png" alt="Chiquinho dos Doces" onerror="this.style.display='none'">
+      <strong>Chiquinho dos Doces</strong>
+    </div>
+    <div class="checkout-secure">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z"/>
+        <path d="m9 12 2 2 4-4"/>
+      </svg>
+      <span>100% Seguro</span>
+    </div>
   </header>
 
-  <div class="checkout-page__content">
-    <div class="checkout-field">
-      <label for="checkoutName">Nome completo</label>
-      <input type="text" id="checkoutName" placeholder="Seu nome">
+  <div class="checkout-steps">
+    <div class="checkout-step done">
+      <span>✓</span>
+      <small>Carrinho</small>
     </div>
-
-    <div class="checkout-field">
-      <label for="checkoutPhone">WhatsApp</label>
-      <input type="tel" id="checkoutPhone" placeholder="(47) 99999-9999">
+    <div class="checkout-line"></div>
+    <div class="checkout-step active">
+      <span>2</span>
+      <small>Entrega</small>
     </div>
+    <div class="checkout-line"></div>
+    <div class="checkout-step">
+      <span>3</span>
+      <small>Pagamento</small>
+    </div>
+    <div class="checkout-line"></div>
+    <div class="checkout-step">
+      <span>4</span>
+      <small>Confirmação</small>
+    </div>
+  </div>
 
-    <div class="checkout-field">
-      <label>Forma de recebimento</label>
-      <div class="option-toggle" id="deliveryOptions">
-        <button type="button" class="option-btn active" data-value="entrega">Entrega</button>
-        <button type="button" class="option-btn" data-value="retirada">Retirada</button>
+  <div class="checkout-content">
+
+    <!-- CARD 1: Tipo de entrega -->
+    <div class="checkout-card">
+      <h2>Tipo de entrega</h2>
+      <div class="delivery-options" id="deliveryOptions">
+        <button type="button" class="option-card active" data-value="entrega">
+          <div>
+            <strong>Entrega</strong>
+            <small>Entrega combinada pelo WhatsApp</small>
+          </div>
+          <span class="option-check">✓</span>
+        </button>
+        <button type="button" class="option-card" data-value="retirada">
+          <div>
+            <strong>Retirada no local</strong>
+            <small>Combine a retirada com a loja</small>
+          </div>
+          <span class="option-check">✓</span>
+        </button>
       </div>
     </div>
 
-    <div id="deliveryFields">
+    <!-- CARD 2: Seus dados -->
+    <div class="checkout-card">
+      <h2>Seus dados</h2>
       <div class="checkout-field">
-        <label for="checkoutAddress">Endereço completo</label>
+        <label for="checkoutName">Nome completo *</label>
+        <input type="text" id="checkoutName" placeholder="Seu nome">
+      </div>
+      <div class="checkout-field">
+        <label for="checkoutPhone">Telefone / WhatsApp *</label>
+        <input type="tel" id="checkoutPhone" placeholder="(47) 99999-9999">
+      </div>
+    </div>
+
+    <!-- CARD 3: Localização de entrega (some se for Retirada) -->
+    <div class="checkout-card" id="deliveryFields">
+      <h2>Localização de entrega</h2>
+      <button type="button" class="use-location-btn" id="useLocationBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+          <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/>
+          <circle cx="12" cy="9.5" r="2.5"/>
+        </svg>
+        Usar minha localização atual
+      </button>
+      <div class="checkout-field">
+        <label for="checkoutAddress">Endereço completo *</label>
         <input type="text" id="checkoutAddress" placeholder="Rua, avenida...">
       </div>
       <div class="checkout-field">
-        <label for="checkoutNumber">Número</label>
+        <label for="checkoutNumber">Número *</label>
         <input type="text" id="checkoutNumber" placeholder="Nº">
       </div>
       <div class="checkout-field">
-        <label for="checkoutNeighborhood">Bairro</label>
+        <label for="checkoutNeighborhood">Bairro *</label>
         <input type="text" id="checkoutNeighborhood" placeholder="Bairro">
       </div>
       <div class="checkout-field">
@@ -203,28 +261,120 @@
       </div>
     </div>
 
-    <div class="checkout-field">
-      <label>Forma de pagamento</label>
-      <div class="option-toggle" id="paymentOptions">
-        <button type="button" class="option-btn active" data-value="pix">Pix</button>
-        <button type="button" class="option-btn" data-value="dinheiro">Dinheiro</button>
-        <button type="button" class="option-btn" data-value="cartao">Cartão na entrega</button>
+    <!-- CARD 4: Pagamento -->
+    <div class="checkout-card">
+      <h2>Pagamento</h2>
+      <div class="payment-options" id="paymentOptions">
+        <button type="button" class="option-card active" data-value="pix">
+          <div><strong>Pix</strong></div>
+          <span class="option-check">✓</span>
+        </button>
+        <button type="button" class="option-card" data-value="dinheiro">
+          <div><strong>Dinheiro</strong></div>
+          <span class="option-check">✓</span>
+        </button>
+        <button type="button" class="option-card" data-value="cartao">
+          <div><strong>Cartão na entrega</strong></div>
+          <span class="option-check">✓</span>
+        </button>
+      </div>
+
+      <div class="checkout-field" id="changeField" hidden>
+        <label for="checkoutChange">Troco para quanto?</label>
+        <input type="text" id="checkoutChange" placeholder="Ex: R$ 50,00">
+      </div>
+
+      <div class="checkout-field">
+        <label for="checkoutNote">Observação do pedido</label>
+        <textarea id="checkoutNote" placeholder="Alguma observação? (opcional)"></textarea>
       </div>
     </div>
 
-    <div class="checkout-field" id="changeField" hidden>
-      <label for="checkoutChange">Troco para quanto?</label>
-      <input type="text" id="checkoutChange" placeholder="Ex: R$ 50,00">
+    <!-- CARD 5: Resumo do pedido -->
+    <div class="checkout-card">
+      <h2>Resumo do pedido</h2>
+      <div id="checkoutSummaryItems"></div>
+      <div class="summary-row">
+        <span>Subtotal</span>
+        <strong id="checkoutSubtotal">R$ 0,00</strong>
+      </div>
+      <div class="summary-row">
+        <span>Taxa de entrega</span>
+        <strong id="checkoutDeliveryFee">A combinar</strong>
+      </div>
+      <div class="summary-row total-row">
+        <span>Total</span>
+        <strong id="checkoutTotal">R$ 0,00</strong>
+      </div>
     </div>
 
-    <div class="checkout-field">
-      <label for="checkoutNote">Observação do pedido</label>
-      <textarea id="checkoutNote" placeholder="Alguma observação? (opcional)"></textarea>
+  </div>
+
+  <div class="checkout-submit-bar">
+    <button class="checkout-submit-btn" id="sendOrderBtn">Enviar pedido pelo WhatsApp</button>
+  </div>
+</section>
+
+<!-- ===== PÁGINA DE DETALHES DO PRODUTO (estilo Day Lanches) ===== -->
+<section class="product-detail-page" id="productDetailPage">
+  <div class="product-detail-hero">
+    <img id="productDetailImage" src="" alt="">
+
+    <button class="product-detail-back" id="closeProductDetail" aria-label="Voltar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20">
+        <path d="m15 18-6-6 6-6"/>
+      </svg>
+    </button>
+
+    <div class="product-detail-actions">
+      <button class="product-detail-share" id="shareProductBtn" aria-label="Compartilhar produto">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="19" height="19">
+          <circle cx="18" cy="5" r="3"/>
+          <circle cx="6" cy="12" r="3"/>
+          <circle cx="18" cy="19" r="3"/>
+          <path d="m8.59 13.51 6.83 3.98"/>
+          <path d="m15.41 6.51-6.82 3.98"/>
+        </svg>
+      </button>
+
+      <button class="product-detail-whatsapp" id="productWhatsappBtn" aria-label="Perguntar no WhatsApp">
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.46 1.32 4.96L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.86 9.86 0 0 0 12.04 2m0 1.67a8.2 8.2 0 0 1 5.83 2.42 8.19 8.19 0 0 1 2.41 5.83c0 4.55-3.7 8.24-8.25 8.24a8.3 8.3 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.22 8.22 0 0 1-1.26-4.38c0-4.55 3.7-8.25 8.26-8.25M8.53 6.85c-.17 0-.45.06-.68.32-.24.25-.9.88-.9 2.15 0 1.27.92 2.5 1.05 2.67.13.17 1.8 2.86 4.43 3.9 2.19.87 2.64.7 3.11.65.47-.04 1.53-.62 1.75-1.23s.22-1.11.15-1.22c-.06-.11-.24-.17-.5-.3s-1.53-.75-1.77-.84-.4-.13-.58.13-.68.84-.83 1.02c-.15.17-.3.19-.56.06-.26-.13-1.08-.4-2.06-1.27-.76-.68-1.28-1.51-1.43-1.77-.15-.25-.02-.39.11-.52.12-.12.26-.3.4-.45.13-.15.17-.25.26-.43.09-.17.04-.32-.02-.45-.06-.13-.58-1.44-.82-1.96-.2-.46-.42-.44-.58-.45z"/>
+        </svg>
+      </button>
     </div>
   </div>
 
-  <div class="checkout-page__footer">
-    <button class="checkout-btn" id="sendOrderBtn">Enviar pedido pelo WhatsApp</button>
+  <div class="product-detail-body">
+    <h1 id="productDetailName"></h1>
+
+    <div class="product-detail-price" id="productDetailPrice"></div>
+
+    <p class="product-detail-description" id="productDetailDescription"></p>
+
+    <div class="product-detail-chip">
+      <span id="productDetailEmoji"></span>
+      <strong id="productDetailCategory"></strong>
+    </div>
+
+    <div class="product-detail-qty-card">
+      <strong>Quantidade</strong>
+      <div class="product-detail-qty-control">
+        <button id="decreaseProductQty" aria-label="Diminuir quantidade">−</button>
+        <span id="productDetailQty">1</span>
+        <button id="increaseProductQty" aria-label="Aumentar quantidade">+</button>
+      </div>
+    </div>
+
+    <div class="product-detail-note">
+      <label for="productDetailNote">Alguma observação?</label>
+      <textarea id="productDetailNote" placeholder="Ex: sem cobertura, mais gelado, colher à parte..."></textarea>
+    </div>
+
+    <button class="product-detail-add-btn" id="addProductDetailToCart">
+      <span>+</span>
+      <strong>Adicionar ao carrinho</strong>
+    </button>
   </div>
 </section>
 

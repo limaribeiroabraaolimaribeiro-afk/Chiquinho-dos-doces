@@ -71,7 +71,8 @@ const CATEGORIES = [
 
 const state = {
   category: 'mousses',
-  cart: {} // { productId: quantity }
+  cart: {}, // { productId: quantity }
+  notes: {} // { productId: observação escolhida na página de detalhes }
 };
 
 const currency = (value) =>
@@ -122,11 +123,17 @@ function createProductCard(product) {
 
   attachImageFallback(card.querySelector('img'), product);
 
+  card.addEventListener('click', () => openProductDetail(product.id));
+
   card.querySelector('.favorite-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
     e.currentTarget.classList.toggle('is-active');
   });
 
-  card.querySelector('.add-btn').addEventListener('click', () => addToCart(product.id));
+  card.querySelector('.add-btn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    addToCart(product.id);
+  });
 
   return card;
 }
@@ -142,6 +149,142 @@ function renderProducts() {
     PRODUCTS.filter(p => p.category === key)
       .forEach(p => grid.appendChild(createProductCard(p)));
   });
+}
+
+// ---------- Página de detalhes do produto ----------
+
+const CATEGORY_LABELS = { mousses: 'Mousse', tortas: 'Torta de Bolacha' };
+
+let currentDetailProductId = null;
+let productDetailQty = 1;
+
+function openProductDetail(productId) {
+  const product = PRODUCTS.find(p => p.id === productId);
+  if (!product) return;
+
+  currentDetailProductId = productId;
+  productDetailQty = 1;
+
+  const img = document.getElementById('productDetailImage');
+  img.dataset.triedTemp = '';
+  img.style.display = '';
+  img.parentElement.classList.remove('product-image--fallback');
+  img.alt = product.name;
+  img.src = product.image;
+  img.onerror = () => {
+    if (product.tempImage && !img.dataset.triedTemp) {
+      img.dataset.triedTemp = 'true';
+      if (product.tempImagePosition) img.style.objectPosition = product.tempImagePosition;
+      img.src = product.tempImage;
+    } else {
+      img.style.display = 'none';
+      img.parentElement.classList.add('product-image--fallback');
+      img.parentElement.dataset.emoji = product.emoji;
+    }
+  };
+
+  document.getElementById('productDetailName').textContent = product.name;
+  document.getElementById('productDetailDescription').textContent = product.desc;
+  document.getElementById('productDetailPrice').textContent = currency(product.price);
+  document.getElementById('productDetailEmoji').textContent = product.emoji;
+  document.getElementById('productDetailCategory').textContent = CATEGORY_LABELS[product.category] || '';
+  document.getElementById('productDetailQty').textContent = productDetailQty;
+  document.getElementById('productDetailNote').value = '';
+  updateProductDetailAddButton();
+
+  document.getElementById('productDetailPage').classList.add('active');
+  document.body.style.overflow = 'hidden';
+  document.getElementById('bottomBar').style.display = 'none';
+
+  history.replaceState(null, '', `#produto=${productId}`);
+}
+
+function closeProductDetail() {
+  document.getElementById('productDetailPage').classList.remove('active');
+  document.body.style.overflow = '';
+  document.getElementById('bottomBar').style.display = '';
+  currentDetailProductId = null;
+  history.replaceState(null, '', location.pathname + location.search);
+}
+
+// Mantém o preço do botão "Adicionar ao carrinho" sincronizado com a
+// quantidade selecionada (ex: 2 unidades = R$ 30,00).
+function updateProductDetailAddButton() {
+  const product = PRODUCTS.find(p => p.id === currentDetailProductId);
+  if (!product) return;
+  const total = product.price * productDetailQty;
+  const btn = document.getElementById('addProductDetailToCart');
+  btn.querySelector('strong').textContent = `Adicionar ao carrinho — ${currency(total)}`;
+}
+
+document.getElementById('closeProductDetail').addEventListener('click', closeProductDetail);
+
+document.getElementById('decreaseProductQty').addEventListener('click', () => {
+  if (productDetailQty > 1) productDetailQty--;
+  document.getElementById('productDetailQty').textContent = productDetailQty;
+  updateProductDetailAddButton();
+});
+
+document.getElementById('increaseProductQty').addEventListener('click', () => {
+  productDetailQty++;
+  document.getElementById('productDetailQty').textContent = productDetailQty;
+  updateProductDetailAddButton();
+});
+
+document.getElementById('addProductDetailToCart').addEventListener('click', () => {
+  if (!currentDetailProductId) return;
+  const note = document.getElementById('productDetailNote').value.trim();
+  addToCart(currentDetailProductId, productDetailQty, note);
+  closeProductDetail();
+});
+
+// Compartilha o produto via Web Share API; se não houver suporte, copia o
+// texto para a área de transferência ou, em último caso, abre o WhatsApp.
+async function shareProduct(product) {
+  const shareUrl = `${location.origin}${location.pathname}#produto=${product.id}`;
+  const shareText = `Olha esse produto do Chiquinho dos Doces: ${product.name} por ${currency(product.price)}`;
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: product.name, text: shareText, url: shareUrl });
+    } catch {
+      // usuário cancelou o compartilhamento — não faz nada
+    }
+    return;
+  }
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    try {
+      await navigator.clipboard.writeText(`${shareText} ${shareUrl}`);
+      alert('Link copiado! Cole para compartilhar.');
+      return;
+    } catch {
+      // segue para o fallback do WhatsApp
+    }
+  }
+
+  window.open(`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`, '_blank');
+}
+
+document.getElementById('shareProductBtn').addEventListener('click', () => {
+  const product = PRODUCTS.find(p => p.id === currentDetailProductId);
+  if (product) shareProduct(product);
+});
+
+// Botão de WhatsApp sobre a imagem: abre conversa perguntando sobre o produto.
+document.getElementById('productWhatsappBtn').addEventListener('click', () => {
+  const product = PRODUCTS.find(p => p.id === currentDetailProductId);
+  if (!product) return;
+  const message = `Olá! Vi esse produto no catálogo do Chiquinho dos Doces e gostaria de saber mais sobre: ${product.name}`;
+  window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
+});
+
+// Permite abrir um produto direto pela URL (ex: #produto=mousse-limao)
+function openProductFromHash() {
+  const match = location.hash.match(/^#produto=(.+)$/);
+  if (!match) return;
+  const product = PRODUCTS.find(p => p.id === decodeURIComponent(match[1]));
+  if (product) openProductDetail(product.id);
 }
 
 // ---------- Abas de categoria ----------
@@ -305,8 +448,9 @@ document.getElementById('clearSearchHistory').addEventListener('click', () => {
 const WHATSAPP_NUMBER = '5547999184872';
 const WHATSAPP_DISPLAY = '(47) 99918-4872';
 
-function addToCart(productId) {
-  state.cart[productId] = (state.cart[productId] || 0) + 1;
+function addToCart(productId, qty = 1, note = '') {
+  state.cart[productId] = (state.cart[productId] || 0) + qty;
+  if (note) state.notes[productId] = note;
   onCartChanged();
 }
 
@@ -315,6 +459,7 @@ function changeQty(productId, delta) {
   const next = current + delta;
   if (next <= 0) {
     delete state.cart[productId];
+    delete state.notes[productId];
   } else {
     state.cart[productId] = next;
   }
@@ -501,11 +646,12 @@ document.getElementById('goToCheckout').addEventListener('click', openCheckoutPa
 
 function openCheckoutPage() {
   document.getElementById('cartOverlay').classList.remove('active');
-  document.getElementById('checkoutPage').hidden = false;
+  document.getElementById('checkoutPage').classList.add('active');
+  updateCheckoutSummary();
 }
 
 function closeCheckoutPage() {
-  document.getElementById('checkoutPage').hidden = true;
+  document.getElementById('checkoutPage').classList.remove('active');
 
   const { count } = getCartTotals();
   if (count === 0) {
@@ -517,7 +663,7 @@ function closeCheckoutPage() {
 }
 
 function exitToHome() {
-  document.getElementById('checkoutPage').hidden = true;
+  document.getElementById('checkoutPage').classList.remove('active');
   document.getElementById('cartOverlay').classList.remove('active');
   document.body.style.overflow = '';
   document.getElementById('bottomBar').style.display = '';
@@ -526,19 +672,72 @@ function exitToHome() {
 document.getElementById('closeCheckoutPage').addEventListener('click', closeCheckoutPage);
 
 document.getElementById('deliveryOptions').addEventListener('click', (e) => {
-  const btn = e.target.closest('.option-btn');
+  const btn = e.target.closest('.option-card');
   if (!btn) return;
-  document.querySelectorAll('#deliveryOptions .option-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#deliveryOptions .option-card').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('deliveryFields').hidden = btn.dataset.value !== 'entrega';
+  updateCheckoutSummary();
 });
 
 document.getElementById('paymentOptions').addEventListener('click', (e) => {
-  const btn = e.target.closest('.option-btn');
+  const btn = e.target.closest('.option-card');
   if (!btn) return;
-  document.querySelectorAll('#paymentOptions .option-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#paymentOptions .option-card').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('changeField').hidden = btn.dataset.value !== 'dinheiro';
+});
+
+// Preenche o card "Resumo do pedido" com os itens do carrinho e recalcula
+// a taxa de entrega conforme a forma de recebimento escolhida.
+function updateCheckoutSummary() {
+  const container = document.getElementById('checkoutSummaryItems');
+  container.innerHTML = '';
+
+  Object.entries(state.cart).forEach(([id, qty]) => {
+    const product = PRODUCTS.find(p => p.id === id);
+    if (!product) return;
+    const row = document.createElement('div');
+    row.className = 'summary-row';
+    row.innerHTML = `<span>${qty}x ${product.name}</span><strong>${currency(product.price * qty)}</strong>`;
+    container.appendChild(row);
+  });
+
+  const { total } = getCartTotals();
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
+
+  document.getElementById('checkoutSubtotal').textContent = currency(total);
+  document.getElementById('checkoutDeliveryFee').textContent = delivery === 'entrega' ? 'A combinar' : 'Grátis';
+  document.getElementById('checkoutTotal').textContent = currency(total);
+}
+
+// Usa a geolocalização do navegador (quando disponível) para preencher a
+// referência com um link do Google Maps, sem travar o preenchimento manual.
+document.getElementById('useLocationBtn').addEventListener('click', () => {
+  const btn = document.getElementById('useLocationBtn');
+  if (!navigator.geolocation) {
+    alert('Seu navegador não suporta localização automática. Preencha o endereço manualmente.');
+    return;
+  }
+
+  const originalText = btn.textContent;
+  btn.textContent = 'Obtendo localização...';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude, longitude } = pos.coords;
+      const mapsLink = `https://maps.google.com/?q=${latitude},${longitude}`;
+      const referenceField = document.getElementById('checkoutReference');
+      referenceField.value = referenceField.value
+        ? `${referenceField.value} — ${mapsLink}`
+        : `Localização: ${mapsLink}`;
+      btn.textContent = originalText;
+    },
+    () => {
+      alert('Não foi possível obter sua localização. Preencha o endereço manualmente.');
+      btn.textContent = originalText;
+    }
+  );
 });
 
 function buildOrderMessage() {
@@ -546,23 +745,28 @@ function buildOrderMessage() {
   const name = document.getElementById('checkoutName').value.trim();
   const phone = document.getElementById('checkoutPhone').value.trim();
   const note = document.getElementById('checkoutNote').value.trim();
-  const delivery = document.querySelector('#deliveryOptions .option-btn.active').dataset.value;
-  const payment = document.querySelector('#paymentOptions .option-btn.active').dataset.value;
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
+  const payment = document.querySelector('#paymentOptions .option-card.active').dataset.value;
+  const deliveryFee = delivery === 'entrega' ? 'A combinar' : 'Grátis';
 
   const lines = Object.entries(state.cart).map(([id, qty]) => {
     const product = PRODUCTS.find(p => p.id === id);
-    return `- ${qty}x ${product.name} — ${currency(product.price * qty)}`;
+    const itemNote = state.notes[id];
+    return `- ${qty}x ${product.name} — ${currency(product.price * qty)}${itemNote ? ` (Obs: ${itemNote})` : ''}`;
   });
 
   const parts = [
     'Olá! Quero fazer um pedido no Chiquinho dos Doces.',
     '',
+    'Dados do cliente:',
     `Nome: ${name}`,
     `WhatsApp: ${phone}`,
     '',
     'Pedido:',
     ...lines,
     '',
+    `Subtotal: ${currency(total)}`,
+    `Taxa de entrega: ${deliveryFee}`,
     `Total: ${currency(total)}`,
     ''
   ];
@@ -573,20 +777,20 @@ function buildOrderMessage() {
     const number = document.getElementById('checkoutNumber').value.trim();
     const neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
     const reference = document.getElementById('checkoutReference').value.trim();
-    parts.push(`Endereço: ${address}${number ? ', nº ' + number : ''}`);
+    parts.push(`Endereço: ${address}, nº ${number}`);
     parts.push(`Bairro: ${neighborhood}`);
     if (reference) parts.push(`Referência: ${reference}`);
   }
   parts.push('');
 
   let paymentLabel = 'Pix';
+  if (payment === 'dinheiro') paymentLabel = 'Dinheiro';
+  else if (payment === 'cartao') paymentLabel = 'Cartão na entrega';
+  parts.push(`Pagamento: ${paymentLabel}`);
   if (payment === 'dinheiro') {
     const change = document.getElementById('checkoutChange').value.trim();
-    paymentLabel = change ? `Dinheiro (troco para ${change})` : 'Dinheiro';
-  } else if (payment === 'cartao') {
-    paymentLabel = 'Cartão na entrega';
+    if (change) parts.push(`Troco para: ${change}`);
   }
-  parts.push(`Pagamento: ${paymentLabel}`);
   parts.push('');
   parts.push('Observação:');
   parts.push(note || 'Sem observação.');
@@ -602,28 +806,37 @@ document.getElementById('sendOrderBtn').addEventListener('click', () => {
     return;
   }
 
-  const delivery = document.querySelector('#deliveryOptions .option-btn.active').dataset.value;
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
   if (delivery === 'entrega') {
     const address = document.getElementById('checkoutAddress').value.trim();
+    const number = document.getElementById('checkoutNumber').value.trim();
     const neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
-    if (!address || !neighborhood) {
-      alert('Preencha o endereço e o bairro para a entrega.');
+    if (!address || !number || !neighborhood) {
+      alert('Preencha endereço, número e bairro para a entrega.');
       return;
     }
+  }
+
+  const payment = document.querySelector('#paymentOptions .option-card.active');
+  if (!payment) {
+    alert('Selecione a forma de pagamento.');
+    return;
   }
 
   const message = buildOrderMessage();
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 
   state.cart = {};
+  state.notes = {};
   onCartChanged();
   exitToHome();
 });
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (!document.getElementById('checkoutPage').hidden) { closeCheckoutPage(); return; }
+  if (document.getElementById('checkoutPage').classList.contains('active')) { closeCheckoutPage(); return; }
   if (document.getElementById('cartOverlay').classList.contains('active')) { closeCartPage(); return; }
+  if (document.getElementById('productDetailPage').classList.contains('active')) { closeProductDetail(); return; }
   if (!document.getElementById('searchPage').hidden) { closeSearchPage(); }
 });
 
@@ -632,3 +845,4 @@ document.addEventListener('keydown', (e) => {
 renderProducts();
 updateCartBadge();
 updateBottomBar();
+openProductFromHash();
