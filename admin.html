@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel de Gestão | Chiquinho dos Doces</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="admin.css">
+<link rel="icon" type="image/png" href="img/logo.png">
+</head>
+<body>
+
+<!-- ===== TELA DE LOGIN ===== -->
+<section class="login-screen" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <img src="img/logo.png" alt="Chiquinho dos Doces" onerror="this.style.display='none'">
+    </div>
+    <h1>Painel de Gestão</h1>
+    <p class="login-subtitle">Chiquinho dos Doces</p>
+
+    <form id="loginForm" class="login-form">
+      <div class="login-field">
+        <label for="loginEmail">E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seuemail@exemplo.com" autocomplete="username" required>
+      </div>
+      <div class="login-field">
+        <label for="loginPassword">Senha</label>
+        <input type="password" id="loginPassword" placeholder="Sua senha" autocomplete="current-password" required>
+      </div>
+
+      <p class="login-alert" id="loginAlert" hidden></p>
+
+      <button type="submit" class="login-btn" id="loginBtn">Entrar</button>
+    </form>
+  </div>
+</section>
+
+<!-- ===== PAINEL (visível só após login) ===== -->
+<div class="admin-app" id="adminApp" hidden>
+
+  <aside class="admin-sidebar">
+    <div class="admin-brand">
+      <img src="img/logo.png" alt="Chiquinho dos Doces" onerror="this.style.display='none'">
+      <div>
+        <strong>Chiquinho dos Doces</strong>
+        <small>Painel de Gestão</small>
+      </div>
+    </div>
+
+    <nav class="admin-nav" id="adminNav">
+      <button class="admin-nav-item active" data-view="dashboard">
+        <span class="admin-nav-icon">📊</span> Dashboard
+      </button>
+      <button class="admin-nav-item" data-view="products">
+        <span class="admin-nav-icon">🍮</span> Produtos
+      </button>
+      <button class="admin-nav-item" data-view="orders">
+        <span class="admin-nav-icon">🧾</span> Pedidos
+      </button>
+      <button class="admin-nav-item" data-view="deliveries">
+        <span class="admin-nav-icon">🛵</span> Entregas
+      </button>
+    </nav>
+
+    <button class="admin-logout-btn" id="logoutBtn">
+      <span class="admin-nav-icon">🚪</span> Sair
+    </button>
+  </aside>
+
+  <main class="admin-content">
+
+    <header class="admin-topbar">
+      <h1 id="viewTitle">Dashboard</h1>
+      <span class="admin-user-email" id="adminUserEmail"></span>
+    </header>
+
+    <!-- ===== DASHBOARD ===== -->
+    <section class="admin-view active" id="view-dashboard">
+      <div class="dashboard-grid">
+        <div class="dashboard-card">
+          <span class="dashboard-card-label">Total de pedidos</span>
+          <strong class="dashboard-card-value" id="statTotalOrders">0</strong>
+        </div>
+        <div class="dashboard-card dashboard-card--new">
+          <span class="dashboard-card-label">Pedidos novos</span>
+          <strong class="dashboard-card-value" id="statNewOrders">0</strong>
+        </div>
+        <div class="dashboard-card dashboard-card--done">
+          <span class="dashboard-card-label">Pedidos entregues</span>
+          <strong class="dashboard-card-value" id="statDeliveredOrders">0</strong>
+        </div>
+        <div class="dashboard-card dashboard-card--gold">
+          <span class="dashboard-card-label">Total vendido</span>
+          <strong class="dashboard-card-value" id="statTotalSold">R$ 0,00</strong>
+        </div>
+        <div class="dashboard-card dashboard-card--gold">
+          <span class="dashboard-card-label">Vendas de hoje</span>
+          <strong class="dashboard-card-value" id="statTodaySales">R$ 0,00</strong>
+        </div>
+      </div>
+      <p class="admin-empty" id="dashboardMessage" hidden></p>
+    </section>
+
+    <!-- ===== PRODUTOS ===== -->
+    <section class="admin-view" id="view-products">
+      <div class="admin-view-header">
+        <p class="admin-view-subtitle">Cadastre, edite e gerencie os produtos do catálogo.</p>
+        <button class="admin-primary-btn" id="newProductBtn">+ Novo produto</button>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Imagem</th>
+              <th>Nome</th>
+              <th>Categoria</th>
+              <th>Preço</th>
+              <th>Ativo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody id="productsTableBody"></tbody>
+        </table>
+        <p class="admin-empty" id="productsEmpty" hidden>Nenhum produto cadastrado ainda.</p>
+      </div>
+    </section>
+
+    <!-- ===== PEDIDOS ===== -->
+    <section class="admin-view" id="view-orders">
+      <div class="admin-view-header">
+        <p class="admin-view-subtitle">Acompanhe os pedidos recebidos pelo catálogo.</p>
+        <button class="admin-secondary-btn" id="refreshOrdersBtn">Atualizar</button>
+      </div>
+
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Pedido</th>
+              <th>Cliente</th>
+              <th>WhatsApp</th>
+              <th>Total</th>
+              <th>Recebimento</th>
+              <th>Pagamento</th>
+              <th>Status</th>
+              <th>Data</th>
+            </tr>
+          </thead>
+          <tbody id="ordersTableBody"></tbody>
+        </table>
+        <p class="admin-empty" id="ordersEmpty" hidden>Nenhum pedido recebido ainda.</p>
+      </div>
+    </section>
+
+    <!-- ===== ENTREGAS ===== -->
+    <section class="admin-view" id="view-deliveries">
+      <div class="admin-view-header">
+        <p class="admin-view-subtitle">Pedidos que já saíram para entrega.</p>
+        <button class="admin-secondary-btn" id="refreshDeliveriesBtn">Atualizar</button>
+      </div>
+
+      <div class="deliveries-list" id="deliveriesList"></div>
+      <p class="admin-empty" id="deliveriesEmpty" hidden>Nenhum pedido saiu para entrega no momento.</p>
+    </section>
+
+  </main>
+</div>
+
+<!-- ===== MODAL: NOVO/EDITAR PRODUTO ===== -->
+<div class="admin-modal-overlay" id="productModalOverlay">
+  <div class="admin-modal">
+    <div class="admin-modal-header">
+      <h2 id="productModalTitle">Novo produto</h2>
+      <button class="admin-modal-close" id="closeProductModal" aria-label="Fechar">&times;</button>
+    </div>
+
+    <form id="productForm" class="admin-form">
+      <input type="hidden" id="productId">
+
+      <div class="admin-field">
+        <label for="productName">Nome *</label>
+        <input type="text" id="productName" placeholder="Ex: Mousse de Maracujá" required>
+      </div>
+
+      <div class="admin-field">
+        <label for="productDescription">Descrição</label>
+        <textarea id="productDescription" placeholder="Descrição curta do produto"></textarea>
+      </div>
+
+      <div class="admin-field-row">
+        <div class="admin-field">
+          <label for="productPrice">Preço (R$) *</label>
+          <input type="number" id="productPrice" min="0" step="0.01" placeholder="15.00" required>
+        </div>
+        <div class="admin-field">
+          <label for="productCategory">Categoria *</label>
+          <select id="productCategory" required>
+            <option value="mousse">Mousse</option>
+            <option value="torta">Torta de Bolacha</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="admin-field">
+        <label for="productImageUrl">URL da imagem</label>
+        <input type="text" id="productImageUrl" placeholder="img/mousse-maracuja.png ou https://...">
+      </div>
+
+      <label class="admin-checkbox">
+        <input type="checkbox" id="productIsActive" checked>
+        <span>Produto ativo (visível no catálogo)</span>
+      </label>
+
+      <p class="admin-alert" id="productFormAlert" hidden></p>
+
+      <div class="admin-modal-actions">
+        <button type="button" class="admin-secondary-btn" id="cancelProductForm">Cancelar</button>
+        <button type="submit" class="admin-primary-btn" id="saveProductBtn">Salvar produto</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALHES DO PEDIDO ===== -->
+<div class="admin-modal-overlay" id="orderModalOverlay">
+  <div class="admin-modal admin-modal--wide">
+    <div class="admin-modal-header">
+      <h2>Detalhes do pedido</h2>
+      <button class="admin-modal-close" id="closeOrderModal" aria-label="Fechar">&times;</button>
+    </div>
+
+    <div class="order-detail" id="orderDetailContent"></div>
+
+    <div class="admin-modal-actions">
+      <a class="admin-secondary-btn" id="orderWhatsappLink" target="_blank" rel="noopener">Abrir WhatsApp do cliente</a>
+      <select id="orderStatusSelect" class="admin-status-select">
+        <option value="novo">Novo</option>
+        <option value="em_preparo">Em preparo</option>
+        <option value="saiu_entrega">Saiu para entrega</option>
+        <option value="entregue">Entregue</option>
+        <option value="cancelado">Cancelado</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-config.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>

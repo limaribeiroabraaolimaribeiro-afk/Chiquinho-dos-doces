@@ -3,7 +3,10 @@
 // Dados de produtos, carrinho, filtros e busca
 // =========================================================
 
-const PRODUCTS = [
+// Catálogo padrão, usado quando o Supabase ainda não está configurado
+// (ver supabase-config.js) ou quando a busca de produtos falha, para que
+// o site nunca fique sem produtos para mostrar.
+const FALLBACK_PRODUCTS = [
   {
     id: 'mousse-maracuja',
     name: 'Mousse de Maracujá',
@@ -64,11 +67,54 @@ const PRODUCTS = [
   }
 ];
 
+// Catálogo em uso — populado a partir do Supabase (loadProducts) ou,
+// se indisponível, a partir do FALLBACK_PRODUCTS acima.
+let PRODUCTS = FALLBACK_PRODUCTS;
+
 // Categorias exibidas nas abas e suas seções correspondentes no DOM
 const CATEGORIES = [
   { key: 'mousses', gridId: 'grid-mousses', sectionId: 'section-mousses' },
   { key: 'tortas', gridId: 'grid-tortas', sectionId: 'section-tortas' }
 ];
+
+// Categoria do Supabase (singular) → categoria usada no catálogo (plural)
+const DB_CATEGORY_MAP = { mousse: 'mousses', torta: 'tortas' };
+const DB_CATEGORY_EMOJI = { mousse: '🍮', torta: '🍰' };
+
+function mapSupabaseProduct(row) {
+  return {
+    id: row.id,
+    name: row.name,
+    desc: row.description || '',
+    price: Number(row.price),
+    category: DB_CATEGORY_MAP[row.category] || row.category,
+    image: row.image_url || null,
+    emoji: DB_CATEGORY_EMOJI[row.category] || '🍬'
+  };
+}
+
+// Busca produtos ativos no Supabase; se o cliente não estiver configurado,
+// a busca falhar ou não houver nenhum produto cadastrado, usa o catálogo
+// fixo (FALLBACK_PRODUCTS) para o site nunca ficar sem produtos.
+async function loadProducts() {
+  if (!window.supabaseClient) return FALLBACK_PRODUCTS;
+
+  try {
+    const { data, error } = await window.supabaseClient
+      .from('products')
+      .select('*')
+      .eq('is_active', true)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    if (!data || data.length === 0) return FALLBACK_PRODUCTS;
+
+    return data.map(mapSupabaseProduct);
+  } catch (err) {
+    console.warn('Não foi possível carregar produtos do Supabase, usando catálogo padrão:', err);
+    return FALLBACK_PRODUCTS;
+  }
+}
 
 const state = {
   category: 'mousses',
@@ -377,10 +423,13 @@ function renderSearchHistory() {
 function renderSuggestedProducts() {
   const grid = document.getElementById('suggestionProducts');
   grid.innerHTML = '';
-  SUGGESTED_IDS
-    .map(id => PRODUCTS.find(p => p.id === id))
-    .filter(Boolean)
-    .forEach(p => grid.appendChild(createProductCard(p)));
+
+  // Tenta os IDs fixos (catálogo padrão); se os produtos vierem do
+  // Supabase (IDs diferentes), usa simplesmente os primeiros do catálogo.
+  let suggestions = SUGGESTED_IDS.map(id => PRODUCTS.find(p => p.id === id)).filter(Boolean);
+  if (suggestions.length === 0) suggestions = PRODUCTS.slice(0, 4);
+
+  suggestions.forEach(p => grid.appendChild(createProductCard(p)));
 }
 
 function renderSearchPage() {
@@ -1005,11 +1054,85 @@ function buildOrderMessage() {
   return parts.join('\n');
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Salva o pedido e seus itens no Supabase para aparecer no painel de
+// gestão. Não bloqueia o envio pelo WhatsApp: se o Supabase não estiver
+// configurado ou a gravação falhar, só registra um aviso no console.
+async function saveOrderToSupabase() {
+  if (!window.supabaseClient) return;
+
+  const { total } = getCartTotals();
+  const name = document.getElementById('checkoutName').value.trim();
+  const phone = document.getElementById('checkoutPhone').value.trim();
+  const note = document.getElementById('checkoutNote').value.trim();
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
+  const payment = document.querySelector('#paymentOptions .option-card.active').dataset.value;
+
+  const orderRow = {
+    customer_name: name,
+    customer_whatsapp: phone,
+    delivery_type: delivery,
+    address: null,
+    number: null,
+    neighborhood: null,
+    reference: null,
+    payment_method: payment,
+    change_for: null,
+    observation: note || null,
+    subtotal: total,
+    delivery_fee: 0,
+    total: total,
+    status: 'novo'
+  };
+
+  if (delivery === 'entrega') {
+    orderRow.address = document.getElementById('checkoutAddress').value.trim();
+    orderRow.number = document.getElementById('checkoutNumber').value.trim();
+    orderRow.neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
+    orderRow.reference = document.getElementById('checkoutReference').value.trim() || null;
+  }
+
+  if (payment === 'dinheiro') {
+    orderRow.change_for = document.getElementById('checkoutChange').value.trim() || null;
+  }
+
+  const { data: order, error: orderError } = await window.supabaseClient
+    .from('orders')
+    .insert(orderRow)
+    .select()
+    .single();
+
+  if (orderError) throw orderError;
+
+  const items = Object.entries(state.cart).map(([id, qty]) => {
+    const product = PRODUCTS.find(p => p.id === id);
+    return {
+      order_id: order.id,
+      product_id: product && UUID_REGEX.test(product.id) ? product.id : null,
+      product_name: product ? product.name : id,
+      quantity: qty,
+      unit_price: product ? product.price : 0,
+      subtotal: product ? product.price * qty : 0,
+      observation: state.notes[id] || null
+    };
+  });
+
+  const { error: itemsError } = await window.supabaseClient.from('order_items').insert(items);
+  if (itemsError) throw itemsError;
+}
+
 // Chamado só a partir da etapa de confirmação — nome, WhatsApp, endereço e
 // forma de pagamento já foram validados ao avançar pelas etapas anteriores.
+// Abre o WhatsApp imediatamente (dentro do gesto de clique, para o navegador
+// não bloquear o pop-up) e salva o pedido no Supabase em paralelo.
 function sendOrderToWhatsApp() {
   const message = buildOrderMessage();
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
+
+  saveOrderToSupabase().catch((err) => {
+    console.warn('Não foi possível salvar o pedido no Supabase:', err);
+  });
 
   state.cart = {};
   state.notes = {};
@@ -1027,7 +1150,12 @@ document.addEventListener('keydown', (e) => {
 
 // ---------- Inicialização ----------
 
-renderProducts();
-updateCartBadge();
-updateBottomBar();
-openProductFromHash();
+async function init() {
+  PRODUCTS = await loadProducts();
+  renderProducts();
+  updateCartBadge();
+  updateBottomBar();
+  openProductFromHash();
+}
+
+init();
