@@ -670,6 +670,14 @@ a { text-decoration: none; color: inherit; }
   object-position: center;
 }
 
+.product-detail-hero.product-image--fallback {
+  background: radial-gradient(circle at 50% 40%, #fce9b8, #e7b155 75%);
+}
+
+.product-detail-hero.product-image--fallback::after {
+  font-size: 5rem;
+}
+
 .product-detail-back {
   position: absolute;
   top: 18px;

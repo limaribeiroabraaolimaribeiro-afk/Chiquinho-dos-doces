@@ -10,7 +10,7 @@ const PRODUCTS = [
     desc: 'Refrescante e cremosa, com polpa de maracujá.',
     price: 15,
     category: 'mousses',
-    image: 'img/foto do produto maracuja.png',
+    image: 'img/mousse-maracuja.png',
     emoji: '🍈'
   },
   {
@@ -19,7 +19,7 @@ const PRODUCTS = [
     desc: 'Leve e cítrica, com toque especial de limão.',
     price: 15,
     category: 'mousses',
-    image: 'img/foto produto limão.png',
+    image: 'img/mousse-limao.png',
     emoji: '🍋'
   },
   {
@@ -28,7 +28,7 @@ const PRODUCTS = [
     desc: 'Doce na medida certa, com pedaços de morango.',
     price: 15,
     category: 'mousses',
-    image: 'img/produto morango.png',
+    image: 'img/mousse-morango.png',
     emoji: '🍓'
   },
   {
@@ -37,10 +37,9 @@ const PRODUCTS = [
     desc: 'Cremosa e intensa, para os apaixonados por chocolate.',
     price: 15,
     category: 'mousses',
-    // imagem definitiva ainda não enviada pelo cliente — troque o arquivo
-    // "img/produto chocolate.png" quando a foto própria estiver disponível.
-    image: 'img/produto chocolate.png',
-    tempImage: 'img/temp-mousse-chocolate.jpg',
+    // foto de referência — troque pelo arquivo definitivo quando o
+    // cliente enviar a foto própria do Mousse de Chocolate.
+    image: 'img/mousse-chocolate.jpg',
     emoji: '🍫'
   },
   {
@@ -49,7 +48,8 @@ const PRODUCTS = [
     desc: 'Clássica e irresistível, feita com camadas de bolacha e creme.',
     price: 15,
     category: 'tortas',
-    image: 'assets/torta-tradicional.jpg',
+    // sem foto própria ainda — usa o fallback visual com emoji.
+    image: null,
     emoji: '🍰'
   },
   {
@@ -58,7 +58,8 @@ const PRODUCTS = [
     desc: 'Camadas de bolacha com creme de chocolate e cobertura especial.',
     price: 15,
     category: 'tortas',
-    image: 'assets/torta-chocolate.jpg',
+    // sem foto própria ainda — usa o fallback visual com emoji.
+    image: null,
     emoji: '🎂'
   }
 ];
@@ -101,14 +102,18 @@ function createProductCard(product) {
   card.className = 'product-card';
   card.dataset.id = product.id;
 
+  const imageMarkup = product.image
+    ? `<img src="${product.image}" alt="${product.name}">`
+    : '';
+
   card.innerHTML = `
-    <div class="product-image" data-emoji="${product.emoji}">
+    <div class="product-image${product.image ? '' : ' product-image--fallback'}" data-emoji="${product.emoji}">
       <button class="favorite-btn" aria-label="Favoritar ${product.name}">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
           <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 1 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8Z"/>
         </svg>
       </button>
-      <img src="${product.image}" alt="${product.name}">
+      ${imageMarkup}
     </div>
     <div class="product-info">
       <h3 class="product-title">${product.name}</h3>
@@ -121,7 +126,8 @@ function createProductCard(product) {
     </div>
   `;
 
-  attachImageFallback(card.querySelector('img'), product);
+  const cardImg = card.querySelector('img');
+  if (cardImg) attachImageFallback(cardImg, product);
 
   card.addEventListener('click', () => openProductDetail(product.id));
 
@@ -167,21 +173,29 @@ function openProductDetail(productId) {
 
   const img = document.getElementById('productDetailImage');
   img.dataset.triedTemp = '';
-  img.style.display = '';
-  img.parentElement.classList.remove('product-image--fallback');
-  img.alt = product.name;
-  img.src = product.image;
-  img.onerror = () => {
-    if (product.tempImage && !img.dataset.triedTemp) {
-      img.dataset.triedTemp = 'true';
-      if (product.tempImagePosition) img.style.objectPosition = product.tempImagePosition;
-      img.src = product.tempImage;
-    } else {
-      img.style.display = 'none';
-      img.parentElement.classList.add('product-image--fallback');
-      img.parentElement.dataset.emoji = product.emoji;
-    }
-  };
+  img.parentElement.dataset.emoji = product.emoji;
+
+  if (product.image) {
+    img.style.display = '';
+    img.parentElement.classList.remove('product-image--fallback');
+    img.alt = product.name;
+    img.src = product.image;
+    img.onerror = () => {
+      if (product.tempImage && !img.dataset.triedTemp) {
+        img.dataset.triedTemp = 'true';
+        if (product.tempImagePosition) img.style.objectPosition = product.tempImagePosition;
+        img.src = product.tempImage;
+      } else {
+        img.style.display = 'none';
+        img.parentElement.classList.add('product-image--fallback');
+      }
+    };
+  } else {
+    img.onerror = null;
+    img.removeAttribute('src');
+    img.style.display = 'none';
+    img.parentElement.classList.add('product-image--fallback');
+  }
 
   document.getElementById('productDetailName').textContent = product.name;
   document.getElementById('productDetailDescription').textContent = product.desc;
