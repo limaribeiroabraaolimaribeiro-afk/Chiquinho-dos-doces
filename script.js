@@ -644,10 +644,14 @@ document.getElementById('goToCheckout').addEventListener('click', openCheckoutPa
 
 // ---------- Tela de checkout ----------
 
+let checkoutStep = 'delivery'; // 'delivery' | 'payment' | 'confirmation'
+
 function openCheckoutPage() {
   document.getElementById('cartOverlay').classList.remove('active');
   document.getElementById('checkoutPage').classList.add('active');
-  updateCheckoutSummary();
+  checkoutStep = 'delivery';
+  clearCheckoutAlert();
+  renderCheckoutStep();
 }
 
 function closeCheckoutPage() {
@@ -669,7 +673,23 @@ function exitToHome() {
   document.getElementById('bottomBar').style.display = '';
 }
 
-document.getElementById('closeCheckoutPage').addEventListener('click', closeCheckoutPage);
+// Botão voltar do topo: volta uma etapa por vez; na primeira etapa, fecha o
+// checkout e retorna ao modal do carrinho.
+function handleCheckoutBack() {
+  if (checkoutStep === 'payment') {
+    checkoutStep = 'delivery';
+    clearCheckoutAlert();
+    renderCheckoutStep();
+  } else if (checkoutStep === 'confirmation') {
+    checkoutStep = 'payment';
+    clearCheckoutAlert();
+    renderCheckoutStep();
+  } else {
+    closeCheckoutPage();
+  }
+}
+
+document.getElementById('closeCheckoutPage').addEventListener('click', handleCheckoutBack);
 
 document.getElementById('deliveryOptions').addEventListener('click', (e) => {
   const btn = e.target.closest('.option-card');
@@ -677,7 +697,6 @@ document.getElementById('deliveryOptions').addEventListener('click', (e) => {
   document.querySelectorAll('#deliveryOptions .option-card').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   document.getElementById('deliveryFields').hidden = btn.dataset.value !== 'entrega';
-  updateCheckoutSummary();
 });
 
 document.getElementById('paymentOptions').addEventListener('click', (e) => {
@@ -688,8 +707,138 @@ document.getElementById('paymentOptions').addEventListener('click', (e) => {
   document.getElementById('changeField').hidden = btn.dataset.value !== 'dinheiro';
 });
 
-// Preenche o card "Resumo do pedido" com os itens do carrinho e recalcula
-// a taxa de entrega conforme a forma de recebimento escolhida.
+// ---------- Aviso de validação inline (sem alert() feio) ----------
+
+function showCheckoutAlert(message) {
+  const alertEl = document.getElementById('checkoutAlert');
+  alertEl.textContent = message;
+  alertEl.hidden = false;
+  alertEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function clearCheckoutAlert() {
+  const alertEl = document.getElementById('checkoutAlert');
+  alertEl.hidden = true;
+  alertEl.textContent = '';
+}
+
+function markFieldError(id) {
+  document.getElementById(id).classList.add('field-error');
+}
+
+['checkoutName', 'checkoutPhone', 'checkoutAddress', 'checkoutNumber', 'checkoutNeighborhood'].forEach(id => {
+  document.getElementById(id).addEventListener('input', (e) => e.target.classList.remove('field-error'));
+});
+
+// ---------- Alternância entre as etapas do checkout ----------
+
+function renderCheckoutStep() {
+  document.getElementById('deliveryStepPanel').hidden = checkoutStep !== 'delivery';
+  document.getElementById('paymentStepPanel').hidden = checkoutStep !== 'payment';
+  document.getElementById('confirmationStepPanel').hidden = checkoutStep !== 'confirmation';
+
+  updateCheckoutStepsUI();
+  document.getElementById('checkoutPage').scrollTop = 0;
+
+  const stepBtn = document.getElementById('checkoutStepBtn');
+  if (checkoutStep === 'delivery') {
+    stepBtn.textContent = 'Continuar para pagamento →';
+  } else if (checkoutStep === 'payment') {
+    updatePaymentSummary();
+    stepBtn.textContent = 'Continuar para confirmação →';
+  } else {
+    renderConfirmationStep();
+    stepBtn.textContent = 'Enviar pedido pelo WhatsApp';
+  }
+}
+
+// Atualiza os círculos da barra de etapas (concluído / ativo / pendente).
+function updateCheckoutStepsUI() {
+  const steps = [
+    { key: 'delivery', el: document.getElementById('stepDelivery'), num: '2' },
+    { key: 'payment', el: document.getElementById('stepPayment'), num: '3' },
+    { key: 'confirmation', el: document.getElementById('stepConfirmation'), num: '4' }
+  ];
+  const idx = steps.findIndex(s => s.key === checkoutStep);
+
+  steps.forEach((step, i) => {
+    step.el.classList.remove('done', 'active');
+    const span = step.el.querySelector('span');
+    if (i < idx) {
+      step.el.classList.add('done');
+      span.textContent = '✓';
+    } else {
+      if (i === idx) step.el.classList.add('active');
+      span.textContent = step.num;
+    }
+  });
+}
+
+function goToPayment() {
+  clearCheckoutAlert();
+  const name = document.getElementById('checkoutName').value.trim();
+  const phone = document.getElementById('checkoutPhone').value.trim();
+
+  if (!name) {
+    markFieldError('checkoutName');
+    showCheckoutAlert('Preencha seu nome completo para continuar.');
+    return;
+  }
+  if (!phone) {
+    markFieldError('checkoutPhone');
+    showCheckoutAlert('Preencha seu WhatsApp para continuar.');
+    return;
+  }
+
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
+  if (delivery === 'entrega') {
+    const address = document.getElementById('checkoutAddress').value.trim();
+    const number = document.getElementById('checkoutNumber').value.trim();
+    const neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
+    const missing = [];
+    if (!address) { markFieldError('checkoutAddress'); missing.push('endereço'); }
+    if (!number) { markFieldError('checkoutNumber'); missing.push('número'); }
+    if (!neighborhood) { markFieldError('checkoutNeighborhood'); missing.push('bairro'); }
+    if (missing.length) {
+      showCheckoutAlert(`Preencha ${missing.join(', ')} para continuar com a entrega.`);
+      return;
+    }
+  }
+
+  checkoutStep = 'payment';
+  renderCheckoutStep();
+}
+
+function goToConfirmation() {
+  clearCheckoutAlert();
+  const payment = document.querySelector('#paymentOptions .option-card.active');
+  if (!payment) {
+    showCheckoutAlert('Selecione a forma de pagamento para continuar.');
+    return;
+  }
+  checkoutStep = 'confirmation';
+  renderCheckoutStep();
+}
+
+document.getElementById('checkoutStepBtn').addEventListener('click', () => {
+  if (checkoutStep === 'delivery') {
+    goToPayment();
+  } else if (checkoutStep === 'payment') {
+    goToConfirmation();
+  } else {
+    sendOrderToWhatsApp();
+  }
+});
+
+// Resumo enxuto exibido na etapa de pagamento (apenas subtotal e total).
+function updatePaymentSummary() {
+  const { total } = getCartTotals();
+  document.getElementById('paymentSubtotal').textContent = currency(total);
+  document.getElementById('paymentTotal').textContent = currency(total);
+}
+
+// Preenche o card "Resumo do pedido" (etapa de confirmação) com os itens do
+// carrinho e recalcula a taxa de entrega conforme a forma de recebimento.
 function updateCheckoutSummary() {
   const container = document.getElementById('checkoutSummaryItems');
   container.innerHTML = '';
@@ -709,6 +858,50 @@ function updateCheckoutSummary() {
   document.getElementById('checkoutSubtotal').textContent = currency(total);
   document.getElementById('checkoutDeliveryFee').textContent = delivery === 'entrega' ? 'A combinar' : 'Grátis';
   document.getElementById('checkoutTotal').textContent = currency(total);
+}
+
+// Monta a etapa de confirmação: dados do cliente, entrega/endereço,
+// pagamento e observação, além do resumo completo do pedido.
+function renderConfirmationStep() {
+  const name = document.getElementById('checkoutName').value.trim();
+  const phone = document.getElementById('checkoutPhone').value.trim();
+  const note = document.getElementById('checkoutNote').value.trim();
+  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
+  const payment = document.querySelector('#paymentOptions .option-card.active').dataset.value;
+
+  const rows = [
+    ['Nome', name],
+    ['WhatsApp', phone],
+    ['Forma de recebimento', delivery === 'entrega' ? 'Entrega' : 'Retirada']
+  ];
+
+  if (delivery === 'entrega') {
+    const address = document.getElementById('checkoutAddress').value.trim();
+    const number = document.getElementById('checkoutNumber').value.trim();
+    const neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
+    const reference = document.getElementById('checkoutReference').value.trim();
+    rows.push(['Endereço', `${address}, nº ${number}`]);
+    rows.push(['Bairro', neighborhood]);
+    if (reference) rows.push(['Referência', reference]);
+  }
+
+  let paymentLabel = 'Pix';
+  if (payment === 'dinheiro') paymentLabel = 'Dinheiro';
+  else if (payment === 'cartao') paymentLabel = 'Cartão na entrega';
+  rows.push(['Pagamento', paymentLabel]);
+
+  if (payment === 'dinheiro') {
+    const change = document.getElementById('checkoutChange').value.trim();
+    if (change) rows.push(['Troco para', change]);
+  }
+
+  rows.push(['Observação', note || 'Sem observação.']);
+
+  document.getElementById('confirmationDetails').innerHTML = rows
+    .map(([label, value]) => `<div class="confirmation-row"><span>${label}</span><span>${value}</span></div>`)
+    .join('');
+
+  updateCheckoutSummary();
 }
 
 // Usa a geolocalização do navegador (quando disponível) para preencher a
@@ -798,31 +991,9 @@ function buildOrderMessage() {
   return parts.join('\n');
 }
 
-document.getElementById('sendOrderBtn').addEventListener('click', () => {
-  const name = document.getElementById('checkoutName').value.trim();
-  const phone = document.getElementById('checkoutPhone').value.trim();
-  if (!name || !phone) {
-    alert('Preencha seu nome e WhatsApp para continuar.');
-    return;
-  }
-
-  const delivery = document.querySelector('#deliveryOptions .option-card.active').dataset.value;
-  if (delivery === 'entrega') {
-    const address = document.getElementById('checkoutAddress').value.trim();
-    const number = document.getElementById('checkoutNumber').value.trim();
-    const neighborhood = document.getElementById('checkoutNeighborhood').value.trim();
-    if (!address || !number || !neighborhood) {
-      alert('Preencha endereço, número e bairro para a entrega.');
-      return;
-    }
-  }
-
-  const payment = document.querySelector('#paymentOptions .option-card.active');
-  if (!payment) {
-    alert('Selecione a forma de pagamento.');
-    return;
-  }
-
+// Chamado só a partir da etapa de confirmação — nome, WhatsApp, endereço e
+// forma de pagamento já foram validados ao avançar pelas etapas anteriores.
+function sendOrderToWhatsApp() {
   const message = buildOrderMessage();
   window.open(`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`, '_blank');
 
@@ -830,11 +1001,11 @@ document.getElementById('sendOrderBtn').addEventListener('click', () => {
   state.notes = {};
   onCartChanged();
   exitToHome();
-});
+}
 
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
-  if (document.getElementById('checkoutPage').classList.contains('active')) { closeCheckoutPage(); return; }
+  if (document.getElementById('checkoutPage').classList.contains('active')) { handleCheckoutBack(); return; }
   if (document.getElementById('cartOverlay').classList.contains('active')) { closeCartPage(); return; }
   if (document.getElementById('productDetailPage').classList.contains('active')) { closeProductDetail(); return; }
   if (!document.getElementById('searchPage').hidden) { closeSearchPage(); }

@@ -176,22 +176,22 @@
   </header>
 
   <div class="checkout-steps">
-    <div class="checkout-step done">
+    <div class="checkout-step done" id="stepCart">
       <span>✓</span>
       <small>Carrinho</small>
     </div>
     <div class="checkout-line"></div>
-    <div class="checkout-step active">
+    <div class="checkout-step active" id="stepDelivery">
       <span>2</span>
       <small>Entrega</small>
     </div>
     <div class="checkout-line"></div>
-    <div class="checkout-step">
+    <div class="checkout-step" id="stepPayment">
       <span>3</span>
       <small>Pagamento</small>
     </div>
     <div class="checkout-line"></div>
-    <div class="checkout-step">
+    <div class="checkout-step" id="stepConfirmation">
       <span>4</span>
       <small>Confirmação</small>
     </div>
@@ -199,119 +199,150 @@
 
   <div class="checkout-content">
 
-    <!-- CARD 1: Tipo de entrega -->
-    <div class="checkout-card">
-      <h2>Tipo de entrega</h2>
-      <div class="delivery-options" id="deliveryOptions">
-        <button type="button" class="option-card active" data-value="entrega">
-          <div>
-            <strong>Entrega</strong>
-            <small>Entrega combinada pelo WhatsApp</small>
-          </div>
-          <span class="option-check">✓</span>
-        </button>
-        <button type="button" class="option-card" data-value="retirada">
-          <div>
-            <strong>Retirada no local</strong>
-            <small>Combine a retirada com a loja</small>
-          </div>
-          <span class="option-check">✓</span>
-        </button>
+    <p class="checkout-alert" id="checkoutAlert" hidden></p>
+
+    <!-- ===== ETAPA 2: ENTREGA ===== -->
+    <div class="checkout-step-panel" id="deliveryStepPanel">
+
+      <div class="checkout-card">
+        <h2>Tipo de entrega</h2>
+        <div class="delivery-options" id="deliveryOptions">
+          <button type="button" class="option-card active" data-value="entrega">
+            <div>
+              <strong>Entrega</strong>
+              <small>Entrega combinada pelo WhatsApp</small>
+            </div>
+            <span class="option-check">✓</span>
+          </button>
+          <button type="button" class="option-card" data-value="retirada">
+            <div>
+              <strong>Retirada no local</strong>
+              <small>Combine a retirada com a loja</small>
+            </div>
+            <span class="option-check">✓</span>
+          </button>
+        </div>
       </div>
+
+      <div class="checkout-card">
+        <h2>Seus dados</h2>
+        <div class="checkout-field">
+          <label for="checkoutName">Nome completo *</label>
+          <input type="text" id="checkoutName" placeholder="Seu nome">
+        </div>
+        <div class="checkout-field">
+          <label for="checkoutPhone">Telefone / WhatsApp *</label>
+          <input type="tel" id="checkoutPhone" placeholder="(47) 99999-9999">
+        </div>
+      </div>
+
+      <!-- Some se for Retirada -->
+      <div class="checkout-card" id="deliveryFields">
+        <h2>Localização de entrega</h2>
+        <button type="button" class="use-location-btn" id="useLocationBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
+            <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/>
+            <circle cx="12" cy="9.5" r="2.5"/>
+          </svg>
+          Usar minha localização atual
+        </button>
+        <div class="checkout-field">
+          <label for="checkoutAddress">Endereço completo *</label>
+          <input type="text" id="checkoutAddress" placeholder="Rua, avenida...">
+        </div>
+        <div class="checkout-field">
+          <label for="checkoutNumber">Número *</label>
+          <input type="text" id="checkoutNumber" placeholder="Nº">
+        </div>
+        <div class="checkout-field">
+          <label for="checkoutNeighborhood">Bairro *</label>
+          <input type="text" id="checkoutNeighborhood" placeholder="Bairro">
+        </div>
+        <div class="checkout-field">
+          <label for="checkoutReference">Ponto de referência</label>
+          <input type="text" id="checkoutReference" placeholder="Ex: perto da igreja">
+        </div>
+      </div>
+
+      <div class="checkout-card">
+        <h2>Observações</h2>
+        <div class="checkout-field">
+          <label for="checkoutNote">Alguma observação?</label>
+          <textarea id="checkoutNote" placeholder="Alguma observação? (opcional)"></textarea>
+        </div>
+      </div>
+
     </div>
 
-    <!-- CARD 2: Seus dados -->
-    <div class="checkout-card">
-      <h2>Seus dados</h2>
-      <div class="checkout-field">
-        <label for="checkoutName">Nome completo *</label>
-        <input type="text" id="checkoutName" placeholder="Seu nome">
+    <!-- ===== ETAPA 3: PAGAMENTO ===== -->
+    <div class="checkout-step-panel" id="paymentStepPanel" hidden>
+
+      <div class="checkout-card">
+        <h2>Pagamento</h2>
+        <div class="payment-options" id="paymentOptions">
+          <button type="button" class="option-card active" data-value="pix">
+            <div><strong>Pix</strong></div>
+            <span class="option-check">✓</span>
+          </button>
+          <button type="button" class="option-card" data-value="dinheiro">
+            <div><strong>Dinheiro</strong></div>
+            <span class="option-check">✓</span>
+          </button>
+          <button type="button" class="option-card" data-value="cartao">
+            <div><strong>Cartão na entrega</strong></div>
+            <span class="option-check">✓</span>
+          </button>
+        </div>
+
+        <div class="checkout-field" id="changeField" hidden>
+          <label for="checkoutChange">Troco para quanto?</label>
+          <input type="text" id="checkoutChange" placeholder="Ex: R$ 50,00">
+        </div>
       </div>
-      <div class="checkout-field">
-        <label for="checkoutPhone">Telefone / WhatsApp *</label>
-        <input type="tel" id="checkoutPhone" placeholder="(47) 99999-9999">
+
+      <div class="checkout-card">
+        <h2>Resumo do pedido</h2>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong id="paymentSubtotal">R$ 0,00</strong>
+        </div>
+        <div class="summary-row total-row">
+          <span>Total</span>
+          <strong id="paymentTotal">R$ 0,00</strong>
+        </div>
       </div>
+
     </div>
 
-    <!-- CARD 3: Localização de entrega (some se for Retirada) -->
-    <div class="checkout-card" id="deliveryFields">
-      <h2>Localização de entrega</h2>
-      <button type="button" class="use-location-btn" id="useLocationBtn">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="16" height="16">
-          <path d="M12 21s7-6.5 7-11.5A7 7 0 0 0 5 9.5C5 14.5 12 21 12 21Z"/>
-          <circle cx="12" cy="9.5" r="2.5"/>
-        </svg>
-        Usar minha localização atual
-      </button>
-      <div class="checkout-field">
-        <label for="checkoutAddress">Endereço completo *</label>
-        <input type="text" id="checkoutAddress" placeholder="Rua, avenida...">
-      </div>
-      <div class="checkout-field">
-        <label for="checkoutNumber">Número *</label>
-        <input type="text" id="checkoutNumber" placeholder="Nº">
-      </div>
-      <div class="checkout-field">
-        <label for="checkoutNeighborhood">Bairro *</label>
-        <input type="text" id="checkoutNeighborhood" placeholder="Bairro">
-      </div>
-      <div class="checkout-field">
-        <label for="checkoutReference">Ponto de referência</label>
-        <input type="text" id="checkoutReference" placeholder="Ex: perto da igreja">
-      </div>
-    </div>
-
-    <!-- CARD 4: Pagamento -->
-    <div class="checkout-card">
-      <h2>Pagamento</h2>
-      <div class="payment-options" id="paymentOptions">
-        <button type="button" class="option-card active" data-value="pix">
-          <div><strong>Pix</strong></div>
-          <span class="option-check">✓</span>
-        </button>
-        <button type="button" class="option-card" data-value="dinheiro">
-          <div><strong>Dinheiro</strong></div>
-          <span class="option-check">✓</span>
-        </button>
-        <button type="button" class="option-card" data-value="cartao">
-          <div><strong>Cartão na entrega</strong></div>
-          <span class="option-check">✓</span>
-        </button>
+    <!-- ===== ETAPA 4: CONFIRMAÇÃO ===== -->
+    <div class="checkout-step-panel" id="confirmationStepPanel" hidden>
+      <div class="checkout-card">
+        <h2>Confirme seu pedido</h2>
+        <div id="confirmationDetails"></div>
       </div>
 
-      <div class="checkout-field" id="changeField" hidden>
-        <label for="checkoutChange">Troco para quanto?</label>
-        <input type="text" id="checkoutChange" placeholder="Ex: R$ 50,00">
-      </div>
-
-      <div class="checkout-field">
-        <label for="checkoutNote">Observação do pedido</label>
-        <textarea id="checkoutNote" placeholder="Alguma observação? (opcional)"></textarea>
-      </div>
-    </div>
-
-    <!-- CARD 5: Resumo do pedido -->
-    <div class="checkout-card">
-      <h2>Resumo do pedido</h2>
-      <div id="checkoutSummaryItems"></div>
-      <div class="summary-row">
-        <span>Subtotal</span>
-        <strong id="checkoutSubtotal">R$ 0,00</strong>
-      </div>
-      <div class="summary-row">
-        <span>Taxa de entrega</span>
-        <strong id="checkoutDeliveryFee">A combinar</strong>
-      </div>
-      <div class="summary-row total-row">
-        <span>Total</span>
-        <strong id="checkoutTotal">R$ 0,00</strong>
+      <div class="checkout-card">
+        <h2>Resumo do pedido</h2>
+        <div id="checkoutSummaryItems"></div>
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <strong id="checkoutSubtotal">R$ 0,00</strong>
+        </div>
+        <div class="summary-row">
+          <span>Taxa de entrega</span>
+          <strong id="checkoutDeliveryFee">A combinar</strong>
+        </div>
+        <div class="summary-row total-row">
+          <span>Total</span>
+          <strong id="checkoutTotal">R$ 0,00</strong>
+        </div>
       </div>
     </div>
 
   </div>
 
   <div class="checkout-submit-bar">
-    <button class="checkout-submit-btn" id="sendOrderBtn">Enviar pedido pelo WhatsApp</button>
+    <button class="checkout-submit-btn" id="checkoutStepBtn">Continuar para pagamento →</button>
   </div>
 </section>
 
